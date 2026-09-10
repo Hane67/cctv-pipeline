@@ -1,0 +1,93 @@
+# =====================================================================
+# CCTV Video Analytics Pipeline - Production Configuration
+# Project: "Robust CCTV Video Analytics Under Illumination Changes and Compression Artifacts"
+# =====================================================================
+
+version: "1.0.0"
+name: "cctv-analytics-default"
+
+# Stage 1: Adaptive Illumination & Artifact Preprocessing
+preprocessing:
+  enable_clahe: true
+  clahe_clip_limit: 2.5
+  clahe_tile_grid: [8, 8]
+  enable_gamma: true
+  auto_gamma: true
+  gamma_value: 1.4
+  enable_deband: true
+  deband_flat_thresh: 8.0
+  deband_blur_ksize: 9
+  enable_deblock: true
+  deblock_d: 5
+  deblock_sigma_color: 50.0
+  deblock_sigma_space: 50.0
+  enable_denoise: false
+  auto_night_denoise: true
+  denoise_h: 7.0
+  denoise_h_color: 7.0
+
+# Stage 2: Illumination-Invariant Foreground Segmentation
+segmentation:
+  algorithm: "subsense"  # options: 'subsense', 'mog2', 'knn'
+  n_samples: 20
+  lbsp_thresh: 8
+  init_dist_thresh: 24.0
+  min_dist_thresh: 16.0
+  max_dist_thresh: 80.0
+  match_count_req: 2
+  intensity_weight: 0.05
+  morph_open_ksize: 3
+  morph_close_ksize: 7
+  mog2_history: 500
+  mog2_var_threshold: 16.0
+  knn_history: 500
+  knn_dist2_threshold: 400.0
+  detect_shadows: true
+
+# Stage 4: Object Detection
+detection:
+  weights: "yolov8n.pt"
+  conf_threshold: 0.35
+  iou_threshold: 0.45
+  classes: [0, 1, 2, 3, 5, 7]  # 0: person, 1: bicycle, 2: car, 3: motorcycle, 5: bus, 7: truck
+  device: "cpu"
+
+# Tracking Configuration
+tracking:
+  tracking_mode: "hybrid"  # options: 'hybrid' (YOLO + Motion Blobs), 'yolo', 'motion_blob'
+  tracker_type: "bytetrack.yaml"
+  track_buffer: 30
+  max_history_length: 60
+  min_blob_area: 150
+
+# Real-Time Analytics
+analytics:
+  enable_tripwires: true
+  tripwires:
+    - name: "Virtual Tripwire 1"
+      pt1: [0.05, 0.5]
+      pt2: [0.95, 0.5]
+      color: [0, 255, 255]
+  enable_heatmap: false
+  heatmap_decay: 0.995
+  heatmap_alpha: 0.4
+  extract_cdre: false
+
+# Stage 3: Compression Sweep & ROI Optimization
+compression:
+  codec: "libx265"
+  reference_qp: 18
+  sweep_qp_levels: [18, 22, 26, 30, 34, 38, 42, 46, 51]
+  knee_retention_target: 0.90
+  roi_qp: 22
+  bg_qp: 42
+
+# Visualizer & HUD Overlays
+visualizer:
+  view_mode: "quad"  # options: 'quad', 'side_by_side', 'hud', 'mask_only'
+  show_segmentation_overlay: false
+  overlay_alpha: 0.35
+  show_trajectories: true
+  show_boxes: true
+  show_hud_stats: true
+  hud_bg_color: [20, 20, 20]

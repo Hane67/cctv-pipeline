@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV Video Analytics Dashboard | CHRIST University</title>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.3);
+            --accent: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        header .badge {
+            font-size: 0.75rem;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+            padding: 1.5rem 2rem;
+            flex: 1;
+        }
+
+        /* Video Stage */
+        .video-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .video-wrapper {
+            background: #000;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .kpi-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .kpi-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .kpi-sub {
+            font-size: 0.75rem;
+            color: var(--accent);
+        }
+
+        /* Controls Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .card-header {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .control-label span.val {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        select, button {
+            background: var(--bg-main);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.6rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:focus, button:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button.btn-primary {
+            background: var(--primary);
+            color: #0f172a;
+            font-weight: 600;
+            border: none;
+        }
+
+        button.btn-primary:hover {
+            opacity: 0.9;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #475569;
+            transition: .3s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+
+        #chart-container {
+            display: none;
+            margin-top: 0.5rem;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        #chart-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Robust CCTV Video Analytics Platform
+        </h1>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <span class="badge">CSEDS743E04</span>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent); border-color: var(--accent);">Active</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Main Video Area -->
+        <div class="video-container">
+            <div class="video-wrapper">
+                <img id="stream-feed" src="/video_feed" alt="Surveillance Stream">
+            </div>
+
+            <div class="kpi-row">
+                <div class="kpi-card">
+                    <span class="kpi-label">Processing FPS</span>
+                    <span class="kpi-value" id="fps-val">--</span>
+                    <span class="kpi-sub" id="latency-val">Total: -- ms</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Scene Illumination</span>
+                    <span class="kpi-value" id="scene-val">Normal</span>
+                    <span class="kpi-sub" id="gamma-rec-val">Rec. Gamma: --</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Active Targets</span>
+                    <span class="kpi-value" id="tracks-val">0</span>
+                    <span class="kpi-sub">Tracking Active</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Tripwire Crossings</span>
+                    <span class="kpi-value" id="crossings-val">0</span>
+                    <span class="kpi-sub">Gate 1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Controls Sidebar -->
+        <div class="sidebar">
+            <!-- Display & Algorithm Mode -->
+            <div class="card">
+                <div class="card-header">Stream & Algorithm Controls</div>
+
+                <div class="control-group">
+                    <label class="control-label">Surveillance Video Feed Source</label>
+                    <select id="source-select" onchange="updateSettings()">
+                        <option value="data/sample_cctv_people.mp4" selected>Real CCTV: Pedestrian Walkway (768x432)</option>
+                        <option value="data/sample_cctv_traffic.mp4">Real CCTV: Highway Traffic (768x432)</option>
+                        <option value="data/synthetic_surveillance.mp4">Synthetic Surveillance Clip (640x480)</option>
+                        <option value="data/synthetic_test.mp4">Synthetic Abstract Shapes (320x240)</option>
+                        <option value="0">USB / Laptop Webcam (Device 0)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Multi-View Mode</label>
+                    <select id="view-mode-select" onchange="updateSettings()">
+                        <option value="quad" selected>Quad-Split (All 4 Stages)</option>
+                        <option value="side_by_side">Side-by-Side (Input vs Output)</option>
+                        <option value="hud">Full Analytics HUD</option>
+                        <option value="mask_only">Foreground Mask Only</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Stage 2 Segmentation Algorithm</label>
+                    <select id="seg-algo-select" onchange="updateSettings()">
+                        <option value="subsense" selected>SuBSENSE (Illumination-Invariant LBSP)</option>
+                        <option value="mog2">MOG2 (Gaussian Mixture Baseline)</option>
+                        <option value="knn">KNN (K-Nearest Neighbors Baseline)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Stage 4 Tracking Strategy</label>
+                    <select id="tracking-mode-select" onchange="updateSettings()">
+                        <option value="hybrid" selected>Hybrid (YOLOv8 + Motion Blob Fallback)</option>
+                        <option value="motion_blob">Motion Blob Tracking (SuBSENSE Blobs)</option>
+                        <option value="yolo">YOLOv8 + ByteTrack Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Stage 1 Tuning -->
+            <div class="card">
+                <div class="card-header">Stage 1: Preprocessing Controls</div>
+
+                <div class="toggle-row">
+                    <span>Auto-Adaptive Gamma</span>
+                    <label class="switch">
+                        <input type="checkbox" id="auto-gamma-toggle" checked onchange="updateSettings()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>Manual Gamma (γ)</span>
+                        <span class="val" id="gamma-label">1.4</span>
+                    </div>
+                    <input type="range" id="gamma-slider" min="0.5" max="2.5" step="0.1" value="1.4" oninput="updateSettings()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>CLAHE Clip Limit</span>
+                        <span class="val" id="clahe-label">2.5</span>
+                    </div>
+                    <input type="range" id="clahe-slider" min="1.0" max="5.0" step="0.5" value="2.5" oninput="updateSettings()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>Debanding Threshold</span>
+                        <span class="val" id="deband-label">8.0</span>
+                    </div>
+                    <input type="range" id="deband-slider" min="2.0" max="20.0" step="1.0" value="8.0" oninput="updateSettings()">
+                </div>
+
+                <div class="toggle-row">
+                    <span>Motion Heatmap</span>
+                    <label class="switch">
+                        <input type="checkbox" id="heatmap-toggle" onchange="updateSettings()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Stage 3 Compression & Actions -->
+            <div class="card">
+                <div class="card-header">Stage 3: Compression & Demos</div>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">
+                    Run constant-QP sweep to discover operational knee point & generate retention curves.
+                </p>
+                <button class="btn-primary" onclick="runQPSweep()">Run QP Compression Sweep</button>
+                <button onclick="generateSynthetic()">Generate Synthetic Surveillance Clip</button>
+
+                <div id="chart-container">
+                    <img id="chart-img" src="" alt="QP Retention Curve">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Poll telemetry metrics every 500ms
+        async function fetchTelemetry() {
+            try {
+                const res = await fetch('/api/telemetry');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('fps-val').innerText = data.fps || '--';
+                    document.getElementById('latency-val').innerText = 'Total: ' + (data.timings_ms?.total_pipeline || '--') + ' ms';
+                    document.getElementById('scene-val').innerText = data.scene_mode || 'Normal';
+                    document.getElementById('gamma-rec-val').innerText = 'Rec. Gamma: ' + (data.recommended_gamma || '--');
+                    document.getElementById('tracks-val').innerText = data.active_tracks || 0;
+
+                    let totalCrossings = 0;
+                    if (data.tripwire_counts) {
+                        for (let k in data.tripwire_counts) {
+                            totalCrossings += data.tripwire_counts[k];
+                        }
+                    }
+                    document.getElementById('crossings-val').innerText = totalCrossings;
+                }
+            } catch (err) {
+                console.error("Telemetry fetch error:", err);
+            }
+        }
+        setInterval(fetchTelemetry, 500);
+
+        async function updateSettings() {
+            const sourceVal = document.getElementById('source-select').value;
+            const trackingMode = document.getElementById('tracking-mode-select').value;
+            const gammaVal = parseFloat(document.getElementById('gamma-slider').value);
+            const claheVal = parseFloat(document.getElementById('clahe-slider').value);
+            const debandVal = parseFloat(document.getElementById('deband-slider').value);
+            const autoGamma = document.getElementById('auto-gamma-toggle').checked;
+            const heatmap = document.getElementById('heatmap-toggle').checked;
+            const viewMode = document.getElementById('view-mode-select').value;
+            const segAlgo = document.getElementById('seg-algo-select').value;
+
+            document.getElementById('gamma-label').innerText = gammaVal.toFixed(1);
+            document.getElementById('clahe-label').innerText = claheVal.toFixed(1);
+            document.getElementById('deband-label').innerText = debandVal.toFixed(1);
+
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    source: sourceVal,
+                    tracking_mode: trackingMode,
+                    gamma: gammaVal,
+                    auto_gamma: autoGamma,
+                    clahe_clip: claheVal,
+                    deband_thresh: debandVal,
+                    view_mode: viewMode,
+                    segmentation_algorithm: segAlgo,
+                    enable_heatmap: heatmap
+                })
+            });
+        }
+
+        async function runQPSweep() {
+            alert("Starting QP compression sweep (18-51). This will analyze detection retention across compression levels...");
+            const res = await fetch('/api/run_sweep', { method: 'POST' });
+            const data = await res.json();
+            if (data.plot_url) {
+                const chartImg = document.getElementById('chart-img');
+                chartImg.src = data.plot_url + '?t=' + Date.now();
+                document.getElementById('chart-container').style.display = 'block';
+                alert('QP Analysis Complete! Knee Point discovered at QP: ' + data.knee_point);
+            }
+        }
+
+        async function generateSynthetic() {
+            const res = await fetch('/api/generate_clip', { method: 'POST' });
+            const data = await res.json();
+            alert("Generated synthetic surveillance video: " + data.path);
+            const selectEl = document.getElementById('source-select');
+            selectEl.value = 'data/synthetic_surveillance.mp4';
+            await updateSettings();
+        }
+    </script>
+</body>
+</html>
