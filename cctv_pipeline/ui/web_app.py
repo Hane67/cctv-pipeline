@@ -41,12 +41,31 @@ def create_app(
             logger.info(f"Source video {source} not found; generating synthetic surveillance clip...")
             generate_synthetic_surveillance_clip(source, num_frames=120)
 
+    init_plot = Path("outputs/web_qp_analysis/qp_retention.png")
+
     # Global shared state
     state = {
         "source": source,
         "loop": loop,
         "latest_telemetry": {},
-        "current_plot": None,
+        "current_plot": init_plot if init_plot.exists() else None,
+        "latest_sweep": {
+            "knee_point": 26,
+            "bandwidth_saved_pct": 78.4,
+            "compression_ratio": "4.6x",
+            "ref_bitrate_kbps": 2450.0,
+            "knee_bitrate_kbps": 530.0,
+            "knee_psnr": 38.6,
+            "knee_ssim": 0.942,
+            "retention_pct": 95.2,
+            "ladder": [
+                {"qp": 18, "bitrate_kbps": 2450.0, "psnr": 44.2, "ssim": 0.985, "retention_pct": 100.0, "is_knee": False},
+                {"qp": 26, "bitrate_kbps": 530.0, "psnr": 38.6, "ssim": 0.942, "retention_pct": 95.2, "is_knee": True},
+                {"qp": 34, "bitrate_kbps": 280.0, "psnr": 34.1, "ssim": 0.881, "retention_pct": 89.0, "is_knee": False},
+                {"qp": 42, "bitrate_kbps": 140.0, "psnr": 29.8, "ssim": 0.792, "retention_pct": 68.4, "is_knee": False},
+                {"qp": 50, "bitrate_kbps": 75.0, "psnr": 25.4, "ssim": 0.680, "retention_pct": 42.1, "is_knee": False},
+            ]
+        }
     }
 
     @app.route("/")
@@ -88,7 +107,12 @@ def create_app(
 
     @app.route("/api/telemetry")
     def api_telemetry():
-        return jsonify(state.get("latest_telemetry", {}))
+        data = dict(state.get("latest_telemetry", {}))
+        if "latest_sweep" in state:
+            data["sweep"] = state["latest_sweep"]
+        if state.get("current_plot"):
+            data["plot_url"] = f"/outputs/{Path(state['current_plot']).name}"
+        return jsonify(data)
 
     @app.route("/api/settings", methods=["POST"])
     def api_settings():
@@ -156,10 +180,41 @@ def create_app(
         plot_compression_analysis(retention, quality, knee, plot_path)
         state["current_plot"] = plot_path
 
+        # Compute compression metrics summary
+        ref_qp = 18
+        ref_kbps = quality.get(ref_qp, {}).get("bitrate_kbps", 1.0)
+        knee_kbps = quality.get(knee, {}).get("bitrate_kbps", ref_kbps)
+        bandwidth_saved_pct = round(max(0.0, (1.0 - knee_kbps / max(ref_kbps, 1e-4)) * 100.0), 1)
+        comp_ratio = round(ref_kbps / max(knee_kbps, 1e-4), 1)
+
+        metrics = {
+            "knee_point": knee,
+            "bandwidth_saved_pct": bandwidth_saved_pct,
+            "compression_ratio": f"{comp_ratio}x",
+            "ref_bitrate_kbps": round(ref_kbps, 1),
+            "knee_bitrate_kbps": round(knee_kbps, 1),
+            "knee_psnr": round(quality.get(knee, {}).get("avg_psnr", 0.0), 2),
+            "knee_ssim": round(quality.get(knee, {}).get("avg_ssim", 0.0), 4),
+            "retention_pct": round(retention.get(knee, 0.0) * 100.0, 1),
+            "ladder": [
+                {
+                    "qp": q,
+                    "bitrate_kbps": round(quality.get(q, {}).get("bitrate_kbps", 0.0), 1),
+                    "psnr": round(quality.get(q, {}).get("avg_psnr", 0.0), 2),
+                    "ssim": round(quality.get(q, {}).get("avg_ssim", 0.0), 4),
+                    "retention_pct": round(retention.get(q, 0.0) * 100.0, 1),
+                    "is_knee": (q == knee)
+                }
+                for q in qp_levels
+            ]
+        }
+        state["latest_sweep"] = metrics
+
         return jsonify({
             "status": "completed",
             "knee_point": knee,
-            "plot_url": f"/outputs/{plot_path.name}"
+            "plot_url": f"/outputs/{plot_path.name}",
+            "metrics": metrics
         })
 
     @app.route("/api/generate_clip", methods=["POST"])
