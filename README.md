@@ -127,30 +127,36 @@ cctv_pipeline/
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/christ-university/cctv_pipeline.git
-cd cctv_pipeline
+git clone https://github.com/Hane67/cctv-pipeline.git
+cd cctv-pipeline
 
 # Install required packages
 pip install -r requirements.txt
 
-# Or install editable package
+# Or install as an editable package
 pip install -e .
 ```
 
-### 2. Video Codec Support
-- **Native FFmpeg**: If `ffmpeg` and `ffprobe` are present in your system `PATH`, the pipeline uses hardware-accelerated H.264/H.265 constant-QP encoding.
-- **Automated Fallback**: If FFmpeg is not installed, the platform automatically switches to OpenCV's internal video encoding with discrete cosine transform (DCT) quantization simulation — zero configuration required!
+### 2. Native H.265 / HEVC Codec Support
+- **Zero-Setup Native H.265**: Bundled `imageio-ffmpeg` guarantees a static FFmpeg binary with native `libx265` and hardware-accelerated HEVC encoders (`hevc_nvenc`, `hevc_qsv`, `hevc_amf`, `hevc_d3d12va`) without manual PATH configuration.
+- **Automated Fallback**: If hardware encoders are absent, the platform transparently uses `libx265` software encoding or OpenCV discrete cosine transform (DCT) quantization simulation.
 
 ---
 
 ## Quickstart & Usage
 
 ### 1. Interactive Web Dashboard
-Launch the modern web dashboard to view live multi-view video, adjust parameters in real-time, switch segmentation algorithms, and trigger QP sweeps:
+Launch the modern web dashboard to view live multi-view video, adjust parameters in real-time, switch segmentation algorithms, review CDNet benchmarks, and trigger QP sweeps:
 ```bash
 python -m cctv_pipeline ui --port 5000
 ```
 Open **`http://localhost:5000`** in your browser.
+
+**Dashboard Features:**
+- **Live Stream View**: Quad-Split (all 4 stages), Side-by-Side (Input vs Output), Full Analytics HUD, or Foreground Mask.
+- **Evaluation & Benchmark Suite**: Real-time H.265 compression ratio (e.g. 4.6x), bandwidth savings % (e.g. 78.4%), operational knee point QP, PSNR, SSIM, and CDNet 2014 metrics (Precision, Recall, F1, PWC).
+- **Per-Stage Latency Distribution**: Stacked visualizer displaying real-time execution distribution across Preprocessing, Segmentation, and Tracking.
+- **Click-to-Expand Graph Lightbox**: Click the sidebar QP curve thumbnail or table button to view and download full-resolution rate-distortion figures.
 
 ### 2. Run Pipeline on Video or Camera
 Run the full 4-stage pipeline with a 4-way split screen (`quad`) showing:
@@ -160,8 +166,8 @@ Run the full 4-stage pipeline with a 4-way split screen (`quad`) showing:
 - **Bottom-Right**: Stage 4 Detection, Tracking, Tripwire Counters, and Telemetry HUD
 
 ```bash
-# Run on a video file
-python -m cctv_pipeline run --source data/synthetic_test.mp4 --out outputs/annotated.mp4 --view quad
+# Run on a real CCTV pedestrian walkway clip
+python -m cctv_pipeline run --source data/sample_cctv_people.mp4 --out outputs/annotated.mp4 --view quad
 
 # Run on local webcam
 python -m cctv_pipeline run --source 0 --view quad
