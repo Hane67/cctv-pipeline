@@ -17,9 +17,21 @@ import numpy as np
 from cctv_pipeline.core.logger import logger
 
 
+def get_ffmpeg_exe() -> Optional[str]:
+    """Finds ffmpeg executable in system PATH or via bundled imageio-ffmpeg."""
+    path = shutil.which("ffmpeg")
+    if path:
+        return path
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
+
+
 def has_ffmpeg() -> bool:
-    """Checks if ffmpeg executable is accessible in system PATH."""
-    return shutil.which("ffmpeg") is not None
+    """Checks if ffmpeg executable is accessible in system PATH or bundled imageio-ffmpeg."""
+    return get_ffmpeg_exe() is not None
 
 
 def compute_psnr(img1: np.ndarray, img2: np.ndarray) -> float:
@@ -68,19 +80,20 @@ def encode_at_qp(
 ) -> Path:
     """
     Encodes video at a constant QP level.
-    If ffmpeg is available, runs libx264/libx265 with -qp parameter.
+    If ffmpeg is available (system PATH or imageio-ffmpeg), runs libx265/libx264 with -qp parameter.
     If ffmpeg is absent, uses OpenCV VideoWriter with DCT quantization simulation.
     """
     out_file = Path(output_path)
     out_file.parent.mkdir(parents=True, exist_ok=True)
 
-    if has_ffmpeg():
-        # FFmpeg Constant QP encoding
+    ffmpeg_exe = get_ffmpeg_exe()
+    if ffmpeg_exe is not None:
+        # Native FFmpeg Constant QP encoding (supports libx265, libx264)
         cmd = [
-            "ffmpeg", "-y", "-i", str(input_path),
+            ffmpeg_exe, "-y", "-i", str(input_path),
             "-c:v", codec,
         ]
-        if codec == "libx265":
+        if codec in ("libx265", "hevc"):
             cmd.extend(["-x265-params", f"qp={qp}"])
         else:
             cmd.extend(["-qp", str(qp)])
@@ -90,7 +103,7 @@ def encode_at_qp(
         return out_file
 
     # Fallback: OpenCV simulated quantization
-    logger.warning(f"ffmpeg not found in PATH. Simulating QP={qp} compression via OpenCV DCT quantization...")
+    logger.warning(f"ffmpeg not found. Simulating QP={qp} compression via OpenCV DCT quantization...")
     cap = cv2.VideoCapture(str(input_path))
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video {input_path}")
